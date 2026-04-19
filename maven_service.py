@@ -8,7 +8,13 @@ import shutil
 class MavenService:
     @staticmethod
     def setup():
-        run_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+        # 处理 PyInstaller 打包后的路径
+        if getattr(sys, 'frozen', False):
+            base_dir = sys._MEIPASS
+            run_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+        else:
+            base_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+            run_dir = base_dir
         
         try:
             maven_dir = None
@@ -23,9 +29,9 @@ class MavenService:
                     shutil.rmtree(old_dir)
             
             zip_path = None
-            for name in os.listdir(run_dir):
-                if name.startswith("apache-maven") and name.endswith(".zip") and os.path.isfile(os.path.join(run_dir, name)):
-                    zip_path = os.path.join(run_dir, name)
+            for name in os.listdir(base_dir):
+                if name.startswith("apache-maven") and name.endswith(".zip") and os.path.isfile(os.path.join(base_dir, name)):
+                    zip_path = os.path.join(base_dir, name)
                     break
             
             if zip_path and os.path.exists(zip_path):
@@ -38,9 +44,9 @@ class MavenService:
                         break
             
             tomcat_zip_path = None
-            for name in os.listdir(run_dir):
-                if name.startswith("apache-tomcat") and name.endswith(".zip") and os.path.isfile(os.path.join(run_dir, name)):
-                    tomcat_zip_path = os.path.join(run_dir, name)
+            for name in os.listdir(base_dir):
+                if name.startswith("apache-tomcat") and name.endswith(".zip") and os.path.isfile(os.path.join(base_dir, name)):
+                    tomcat_zip_path = os.path.join(base_dir, name)
                     break
             
             if tomcat_zip_path and os.path.exists(tomcat_zip_path):
@@ -54,6 +60,11 @@ class MavenService:
             
             if not maven_dir:
                 return "❌ 错误：未能提取或识别 Maven 目录。"
+            
+            custom_settings = os.path.join(base_dir, "data", "maven_settings.xml")
+            target_settings = os.path.join(maven_dir, "conf", "settings.xml")
+            if os.path.exists(custom_settings):
+                shutil.copyfile(custom_settings, target_settings)
             
             try:
                 key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, 

@@ -129,3 +129,8 @@ venv.bak/
 # Maven - keep maven.zip
 apache-maven-*/
 apache-tomcat-*/
+
+# PyInstaller
+build/
+dist/
+*.spec

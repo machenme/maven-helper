@@ -3,6 +3,7 @@ from tkinter import messagebox
 from maven_service import MavenService
 from pom_fixer import PomFixer
 from deal_sql import DealSQLService
+from java_service import JavaService
 
 
 class MainWindow:
@@ -43,6 +44,16 @@ class MainWindow:
             command=self.on_button3_click
         )
         button3.place(x=378, y=12)
+        
+        button4 = tk.Button(
+            self.root,
+            text="检查 Java",
+            font=("Microsoft YaHei UI", 16),
+            width=12,
+            height=3,
+            command=self.on_button4_click
+        )
+        button4.place(x=561, y=12)
     
     def on_button1_click(self):
         result = MavenService.setup()
@@ -55,6 +66,9 @@ class MainWindow:
     def on_button3_click(self):
         result = DealSQLService.deal()
         messagebox.showinfo("结果", result)
+    
+    def on_button4_click(self):
+        JavaService.show_java_dialog(self.root)
     
     def run(self):
         self.root.mainloop()

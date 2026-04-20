@@ -27,7 +27,7 @@ class JavaService:
             pass
             
         try:
-            result = subprocess.run(['java', '-version'], capture_output=True, text=True, timeout=5)
+            result = subprocess.run(['java', '-version'], capture_output=True, text=True, timeout=5, creationflags=subprocess.CREATE_NO_WINDOW)
             if result.returncode == 0:
                 output = result.stderr.strip() or result.stdout.strip()
                 return True, output
@@ -49,7 +49,7 @@ class JavaService:
                 if os.path.exists(java_exe):
                     # 检测版本
                     try:
-                        result = subprocess.run([java_exe, '-version'], capture_output=True, text=True, timeout=3)
+                        result = subprocess.run([java_exe, '-version'], capture_output=True, text=True, timeout=3, creationflags=subprocess.CREATE_NO_WINDOW)
                         version_info = result.stderr.strip() or result.stdout.strip()
                         paths.append({
                             'path': path,
@@ -114,14 +114,11 @@ class JavaService:
         dialog.title("Java 版本排序")
         dialog.geometry("700x500")
         dialog.resizable(False, False)
-        
-        # 居中显示
+
+        dialog.withdraw()
         dialog.update_idletasks()
-        width = dialog.winfo_width()
-        height = dialog.winfo_height()
-        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
-        y = (dialog.winfo_screenheight() // 2) - (height // 2)
-        dialog.geometry(f'{width}x{height}+{x}+{y}')
+        dialog.geometry(f"700x500+{((dialog.winfo_screenwidth()-700)//2)}+{((dialog.winfo_screenheight()-500)//2)}")
+        dialog.deiconify()
         
         tk.Label(dialog, text="当前检测到的Java版本（可调整顺序）:", font=("Microsoft YaHei UI", 12)).place(x=20, y=20)
         
@@ -211,14 +208,11 @@ class JavaService:
         dialog.title("检查 Java 环境")
         dialog.geometry("600x450")
         dialog.resizable(False, False)
-        
-        # 居中显示
+
+        dialog.withdraw()
         dialog.update_idletasks()
-        width = dialog.winfo_width()
-        height = dialog.winfo_height()
-        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
-        y = (dialog.winfo_screenheight() // 2) - (height // 2)
-        dialog.geometry(f'{width}x{height}+{x}+{y}')
+        dialog.geometry(f"600x450+{((dialog.winfo_screenwidth()-600)//2)}+{((dialog.winfo_screenheight()-450)//2)}")
+        dialog.deiconify()
         
         if has_java:
             tk.Label(dialog, text="✅ Java 环境检测成功！", font=("Microsoft YaHei UI", 16, "bold"), fg="green").place(x=200, y=30)

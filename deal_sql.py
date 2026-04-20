@@ -5,12 +5,22 @@ import tkinter as tk
 from tkinter import simpledialog, messagebox, scrolledtext
 
 class DealSQLService:
+    SKIP_DIRS = {
+        '__pycache__', '.git', '.svn', '.hg',
+        'node_modules', 'bower_components',
+        'target', 'build', 'dist', 'out',
+        '.idea', '.vscode', '.settings',
+        '.gradle', '.mvn',
+        'apache-maven-', 'apache-tomcat-',
+    }
+
     @staticmethod
     def find_yml():
         """查找当前目录下所有的 application.yml 或 config.properties"""
         target_files = ['application.yml', 'config.properties']
         results = []
         for root, dirs, files in os.walk(os.getcwd()):
+            dirs[:] = [d for d in dirs if d not in DealSQLService.SKIP_DIRS and not d.startswith('.')]
             for file in files:
                 if file in target_files:
                     results.append(os.path.join(root, file))
@@ -20,11 +30,10 @@ class DealSQLService:
     def find_sql_files():
         """查找当前目录下除了 maven/tomcat 目录以外的 SQL 文件"""
         results = []
-        exclude_dirs = ['apache-maven', 'apache-tomcat']
-        
+
         for root, dirs, files in os.walk(os.getcwd()):
-            dirs[:] = [d for d in dirs if not any(exclude in d for exclude in exclude_dirs)]
-            
+            dirs[:] = [d for d in dirs if d not in DealSQLService.SKIP_DIRS and not d.startswith('.')]
+
             for file in files:
                 if file.endswith('.sql'):
                     results.append(os.path.join(root, file))

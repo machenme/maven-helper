@@ -123,14 +123,31 @@ venv.bak/
 *.sln
 *.sw?
 *.sql
-# uv
 .uv/
 
 # Maven - keep maven.zip
 apache-maven-*/
 apache-tomcat-*/
 
-# PyInstaller
-build/
-dist/
-*.spec
+# Node
+**/node_modules/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/nbdist/
+/.nb-gradle/

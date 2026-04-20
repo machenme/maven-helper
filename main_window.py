@@ -12,7 +12,12 @@ class MainWindow:
         self.root = tk.Tk()
         self.root.title("Maven Helper")
         self.root.geometry("800x550")
-        
+
+        self.root.withdraw()
+        self.root.update_idletasks()
+        self.root.geometry(f"800x550+{((self.root.winfo_screenwidth()-800)//2)}+{((self.root.winfo_screenheight()-550)//2)}")
+        self.root.deiconify()
+
         self.setup_ui()
     
     def setup_ui(self):

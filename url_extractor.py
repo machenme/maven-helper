@@ -2,13 +2,21 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext
 import re
 import os
-import glob
 import webbrowser
 import subprocess
 import codecs
 
 
 class URLExtractorService:
+    SKIP_DIRS = {
+        '__pycache__', '.git', '.svn', '.hg',
+        'node_modules', 'bower_components',
+        'target', 'build', 'dist', 'out',
+        '.idea', '.vscode', '.settings',
+        '.gradle', '.mvn',
+        'apache-maven-', 'apache-tomcat-',
+    }
+
     @staticmethod
     def extract_urls_by_line(content):
         """按行匹配URL并根据关键字(backend/front)分类"""
@@ -48,10 +56,11 @@ class URLExtractorService:
         """自动在当前目录搜索包含'说明'的txt文件"""
         try:
             cwd = os.getcwd()
-            txt_files = glob.glob(os.path.join(cwd, "*.txt"))
-            explanation_files = [f for f in txt_files if "说明" in os.path.basename(f)]
-            if explanation_files:
-                return explanation_files[0]
+            for root, dirs, files in os.walk(cwd):
+                dirs[:] = [d for d in dirs if d not in URLExtractorService.SKIP_DIRS and not d.startswith('.')]
+                for file in files:
+                    if file.endswith('.txt') and '说明' in file:
+                        return os.path.join(root, file)
         except Exception:
             pass
         return None
@@ -63,10 +72,14 @@ class URLExtractorWindow:
         self.root.title("管理网地址提取器")
         self.root.geometry("600x500")
         self.root.resizable(True, True)
+        self.root.withdraw()
 
         if parent:
             self.root.transient(parent)
             self.root.attributes('-topmost', True)
+
+        self.root.update_idletasks()
+        self.root.geometry(f"600x500+{((self.root.winfo_screenwidth()-600)//2)}+{((self.root.winfo_screenheight()-500)//2)}")
 
         self.backend_url_var = tk.StringVar()
         self.frontend_url_var = tk.StringVar()
@@ -74,6 +87,7 @@ class URLExtractorWindow:
 
         self.create_widgets()
         self.auto_find_and_load_doc()
+        self.root.deiconify()
 
     def create_widgets(self):
         top_frame = tk.Frame(self.root)
@@ -170,7 +184,6 @@ class URLExtractorWindow:
             messagebox.showerror("错误", f"无法打开目录: {str(e)}")
 
     def show(self):
-        self.root.deiconify()
         self.root.wait_window()
 
 

@@ -122,7 +122,7 @@ venv.bak/
 *.njsproj
 *.sln
 *.sw?
-
+*.sql
 # uv
 .uv/
 

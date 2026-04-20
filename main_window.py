@@ -4,13 +4,14 @@ from maven_service import MavenService
 from pom_fixer import PomFixer
 from deal_sql import DealSQLService
 from java_service import JavaService
+from url_extractor import URLExtractorService, show_dialog as show_url_extractor_dialog
 
 
 class MainWindow:
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Maven Helper")
-        self.root.geometry("800x450")
+        self.root.geometry("800x550")
         
         self.setup_ui()
     
@@ -54,6 +55,16 @@ class MainWindow:
             command=self.on_button4_click
         )
         button4.place(x=561, y=12)
+
+        button5 = tk.Button(
+            self.root,
+            text="提取 URL",
+            font=("Microsoft YaHei UI", 16),
+            width=12,
+            height=3,
+            command=self.on_button5_click
+        )
+        button5.place(x=12, y=155)
     
     def on_button1_click(self):
         result = MavenService.setup()
@@ -69,6 +80,9 @@ class MainWindow:
     
     def on_button4_click(self):
         JavaService.show_java_dialog(self.root)
+
+    def on_button5_click(self):
+        show_url_extractor_dialog(self.root)
     
     def run(self):
         self.root.mainloop()

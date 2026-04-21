@@ -76,7 +76,6 @@ class URLExtractorWindow:
 
         if parent:
             self.root.transient(parent)
-            self.root.attributes('-topmost', True)
 
         self.root.update_idletasks()
         self.root.geometry(f"600x500+{((self.root.winfo_screenwidth()-600)//2)}+{((self.root.winfo_screenheight()-500)//2)}")

@@ -70,6 +70,16 @@ class MainWindow:
             command=self.on_button5_click
         )
         button5.place(x=12, y=155)
+
+        button6 = tk.Button(
+            self.root,
+            text="运行项目",
+            font=("Microsoft YaHei UI", 16),
+            width=12,
+            height=3,
+            command=self.on_button6_click
+        )
+        button6.place(x=195, y=155)
     
     def on_button1_click(self):
         result = MavenService.setup()
@@ -88,6 +98,9 @@ class MainWindow:
 
     def on_button5_click(self):
         show_url_extractor_dialog(self.root)
+
+    def on_button6_click(self):
+        PomFixer.show_maven_runner_dialog(self.root)
     
     def run(self):
         self.root.mainloop()

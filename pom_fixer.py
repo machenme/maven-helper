@@ -78,10 +78,35 @@ class PomFixer:
 
     @staticmethod
     def kill_port_8080():
-        """只杀死占用 8080 端口的程序"""
+        """只杀死占用 8080 端口的程序及其 CMD 窗口"""
         try:
             cmd = 'for /f "tokens=5" %a in (\'netstat -aon ^| findstr :8080\') do taskkill /F /PID %a'
             subprocess.Popen(f'start "" cmd /c "{cmd} & pause & exit"', shell=True)
+            return True
+        except Exception as e:
+            return False
+
+    @staticmethod
+    def kill_spring_with_cmd():
+        """杀死占用 8080 端口的程序并关闭关联的 CMD 窗口"""
+        try:
+            cmd = '''for /f "tokens=5" %a in ('netstat -aon ^| findstr :8080') do (
+                for /f "tokens=2" %b in ('wmic process where "ProcessId=%a" get ParentProcessId /value ^| find "="') do taskkill /F /PID %b
+                taskkill /F /PID %a
+            )'''
+            subprocess.Popen(f'start "" cmd /c "{cmd} & pause & exit"', shell=True)
+            return True
+        except Exception as e:
+            return False
+
+    @staticmethod
+    def kill_and_restart_spring(project_dir):
+        """关闭并重启 Spring Boot"""
+        try:
+            subprocess.Popen(
+                f'start "" cmd /c "cd /d "{project_dir}" & netstat -ano | findstr :8080 | findstr LISTENING >nul && for /f "tokens=5" %a in (\'netstat -ano ^| findstr :8080 ^| findstr LISTENING\') do taskkill /F /PID %a & mvn spring-boot:run & pause"',
+                shell=True
+            )
             return True
         except Exception as e:
             return False
@@ -152,29 +177,34 @@ class PomFixer:
         btn_frame = tk.Frame(dialog)
         btn_frame.place(x=20, y=340)
 
-        tk.Button(btn_frame, text="mvn clean install", font=("Microsoft YaHei UI", 11), width=18,
-                  command=on_clean_install).pack(side=tk.LEFT, padx=8, pady=5)
-        tk.Button(btn_frame, text="mvn spring-boot:run", font=("Microsoft YaHei UI", 11), width=18,
-                  command=on_spring_boot_run).pack(side=tk.LEFT, padx=8, pady=5)
-        tk.Button(btn_frame, text="执行自定义命令", font=("Microsoft YaHei UI", 11), width=15,
-                  command=on_custom_command).pack(side=tk.LEFT, padx=8, pady=5)
-
-        kill_frame = tk.Frame(dialog)
-        kill_frame.place(x=20, y=410)
-
-        tk.Button(kill_frame, text="停止 Spring Boot", font=("Microsoft YaHei UI", 11), width=18,
-                  command=PomFixer.kill_port_8080).pack(side=tk.LEFT, padx=8, pady=5)
-
         def on_open_directory():
             selection = listbox.curselection()
             if selection:
                 project_dir = projects[selection[0]]
                 PomFixer.open_pom_directory(project_dir)
 
-        tk.Button(kill_frame, text="打开项目目录", font=("Microsoft YaHei UI", 11), width=15,
-                  command=on_open_directory).pack(side=tk.LEFT, padx=8, pady=5)
+        def on_kill_and_restart():
+            selection = listbox.curselection()
+            if selection:
+                project_dir = projects[selection[0]]
+                PomFixer.kill_and_restart_spring(project_dir)
 
-        tk.Label(dialog, text="命令将在新窗口中执行", font=("Microsoft YaHei UI", 9), fg="gray").place(x=20, y=480)
+        buttons = [
+            ("mvn clean install", on_clean_install),
+            ("mvn spring-boot:run", on_spring_boot_run),
+            ("执行自定义命令", on_custom_command),
+            ("停止 Spring Boot", PomFixer.kill_port_8080),
+            ("打开项目目录", on_open_directory),
+            ("关闭并重启", on_kill_and_restart),
+        ]
+
+        for i, (text, cmd) in enumerate(buttons):
+            row = i // 3
+            col = i % 3
+            tk.Button(btn_frame, text=text, font=("Microsoft YaHei UI", 11), width=18, height=2,
+                      command=cmd).grid(row=row, column=col, padx=8, pady=5)
+
+        tk.Label(dialog, text="命令将在新窗口中执行", font=("Microsoft YaHei UI", 9), fg="gray").place(x=20, y=500)
 
         dialog.transient(parent)
         dialog.grab_set()

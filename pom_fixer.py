@@ -1,8 +1,15 @@
+# Usage: 确保以管理员权限运行以获得最佳兼容性
 import os
 import re
 import subprocess
 import tkinter as tk
-from tkinter import scrolledtext
+from tkinter import scrolledtext, messagebox
+
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
 
 
 class PomFixer:
@@ -17,7 +24,7 @@ class PomFixer:
 
     @staticmethod
     def fix():
-        count = 0
+        modified_count = 0
         current_dir = os.getcwd()
 
         for root, dirs, files in os.walk(current_dir):
@@ -25,18 +32,16 @@ class PomFixer:
 
             if 'pom.xml' in files:
                 path = os.path.join(root, 'pom.xml')
-                with open(path, 'r', encoding='utf-8') as f:
+                with open(path, 'r', encoding='utf-8-sig') as f:
                     content = f.read()
 
                 regex = re.compile(r'<(maven.compiler.source|maven.compiler.target)>(.*?)</\1>', re.IGNORECASE)
 
                 def replace_func(match):
-                    nonlocal count
-                    version_str = match.group(2)
+                    version_str = match.group(2).strip()
                     try:
                         version = float(version_str)
-                        if version < 1.8:
-                            count += 1
+                        if 0 < version < 1.8:
                             return f"<{match.group(1)}>1.8</{match.group(1)}>"
                     except ValueError:
                         pass
@@ -45,10 +50,11 @@ class PomFixer:
                 new_content = regex.sub(replace_func, content)
 
                 if content != new_content:
-                    with open(path, 'w', encoding='utf-8') as f:
+                    with open(path, 'w', encoding='utf-8-sig') as f:
                         f.write(new_content)
+                    modified_count += 1
 
-        return f"🎉 已优化 {count // 2} 个项目的版本配置。"
+        return f"🎉 已优化 {modified_count} 个项目的版本配置。"
 
     @staticmethod
     def find_maven_projects():
@@ -69,7 +75,7 @@ class PomFixer:
         """执行 Maven 命令"""
         try:
             subprocess.Popen(
-                f'start "" cmd /c "cd /d "{project_dir}" & {command} & pause & exit"',
+                f'start "" cmd /c "cd /d "{project_dir}" & {command}"',
                 shell=True
             )
             return True
@@ -78,38 +84,78 @@ class PomFixer:
 
     @staticmethod
     def kill_port_8080():
-        """只杀死占用 8080 端口的程序及其 CMD 窗口"""
+        """只杀死占用 8080 端口的程序"""
+        if not PSUTIL_AVAILABLE:
+            messagebox.showerror("错误", "请先安装 psutil 库 (pip install psutil)")
+            return False
+
+        port = 8080
+        killed = False
+        access_denied = False
         try:
-            cmd = 'for /f "tokens=5" %a in (\'netstat -aon ^| findstr :8080\') do taskkill /F /PID %a'
-            subprocess.Popen(f'start "" cmd /c "{cmd} & pause & exit"', shell=True)
-            return True
-        except Exception as e:
+            for proc in psutil.process_iter(['pid', 'name']):
+                try:
+                    connections = proc.connections(kind='inet')
+                    for conn in connections:
+                        if conn.laddr.port == port:
+                            try:
+                                try:
+                                    parent = proc.parent()
+                                    if parent and parent.name() == "cmd.exe":
+                                        parent.kill()
+                                except Exception:
+                                    pass
+                                proc.kill()
+                                killed = True
+                            except psutil.AccessDenied:
+                                access_denied = True
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+
+            if access_denied:
+                messagebox.showwarning("权限不足", "请以管理员身份运行此工具以获得最佳兼容性")
+            return killed
+        except Exception:
             return False
 
     @staticmethod
-    def kill_spring_with_cmd():
-        """杀死占用 8080 端口的程序并关闭关联的 CMD 窗口"""
-        try:
-            cmd = '''for /f "tokens=5" %a in ('netstat -aon ^| findstr :8080') do (
-                for /f "tokens=2" %b in ('wmic process where "ProcessId=%a" get ParentProcessId /value ^| find "="') do taskkill /F /PID %b
-                taskkill /F /PID %a
-            )'''
-            subprocess.Popen(f'start "" cmd /c "{cmd} & pause & exit"', shell=True)
-            return True
-        except Exception as e:
-            return False
+    def wait_for_port_release(port, timeout=3):
+        """等待端口释放"""
+        import time
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            try:
+                for proc in psutil.process_iter(['pid', 'name']):
+                    try:
+                        connections = proc.connections(kind='inet')
+                        for conn in connections:
+                            if conn.laddr.port == port and conn.status == 'LISTENING':
+                                time.sleep(0.5)
+                                break
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        continue
+                return True
+            except Exception:
+                pass
+        return False
 
     @staticmethod
-    def kill_and_restart_spring(project_dir):
+    def kill_and_restart_spring(project_dir, callback=None):
         """关闭并重启 Spring Boot"""
-        try:
-            subprocess.Popen(
-                f'start "" cmd /c "cd /d "{project_dir}" & netstat -ano | findstr :8080 | findstr LISTENING >nul && for /f "tokens=5" %a in (\'netstat -ano ^| findstr :8080 ^| findstr LISTENING\') do taskkill /F /PID %a & mvn spring-boot:run & pause"',
-                shell=True
-            )
-            return True
-        except Exception as e:
+        if not PSUTIL_AVAILABLE:
+            messagebox.showerror("错误", "请先安装 psutil 库 (pip install psutil)")
             return False
+
+        import threading
+        def run_in_thread():
+            PomFixer.kill_port_8080()
+            PomFixer.wait_for_port_release(8080, timeout=3)
+            PomFixer.run_maven_command(project_dir, "mvn spring-boot:run")
+            if callback:
+                callback()
+
+        threading.Thread(target=run_in_thread, daemon=True).start()
+        return True
 
     @staticmethod
     def open_pom_directory(project_dir):
